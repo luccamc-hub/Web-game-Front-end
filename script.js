@@ -1,0 +1,455 @@
+//===================================
+//
+//===================================
+let canvas = document.getElementById("game");
+var ctx = canvas.getContext("2d");
+
+//================================
+//VARIAVEIS GLOBAIS DO JOGO
+//===============================
+
+let pontos = 0;
+let jogoAtivo = true;
+let venceu = false;
+
+//===========================
+// A NAVE
+//===========================
+
+let naveX = 275;
+let naveY = 340;
+let naveLargure = 50;
+let naveAltura = 30
+let naveVelocidade = 5;
+
+//==========================
+// CONTROLES DE TECLADO
+//==========================
+
+let teclaEsquerda = false;
+let teclaDireita = false;
+
+//===========================
+// CONFIG DOS BLOCOS 
+//==========================
+
+const COLUNAS = 8;
+const LINHAS = 4;
+const BLOCOS_LARGURA = 50;
+const BLOCO_ALTURA = 25;
+const ESPACO = 10;
+
+//MATRIZ DE BLOCOS 
+//Cada posição guarda : { x, y, ativo }
+let blocos = [];
+
+//=============================
+//
+//=============================
+
+const MAX_TIROS = 3;
+const TIRO_VELOCIDADE = 8;
+const TIRO_RAIO = 6;
+
+// ARRAY DE TIROS
+// Casa posicao guarda: {x, y, ativo}
+
+let tiros = [];
+const COOLDOWN_TEMPO = 300;
+
+//==============================
+// FUNCOES CRIAR MATRIZ DE BLOCOS
+//==============================
+
+function criarBlocos()
+{
+    //Limpa o array
+    blocos = {}
+
+    //Calcula posição inicial para centralizar //
+    let inicioX = (canvas.width - (COLUNAS * (BLOCO_ALTURA + ESPACO))) / 2;
+    let inicioY = 50;
+    
+    // Percorre as linhas //
+    for(let linha = 0; linha < LINHAS; linha++)
+    {
+        // criar um Array vazio para esta linha
+        bloco[linha] = [];
+
+
+        //percorrer as colunas
+        for (let coluna = 0; coluna < COLUNAS; coluna++)
+        {
+            //Calcula a posição x e y desse bloco
+            let posX = inicioX + (coluna * (BLOCO_LARGURA + ESPACO));
+            let posY = inicioY + (linha * (BLOCO_ALTURA + ESPACO));
+            //Cria o Bloco e guarda na Matriz
+            blocos[linha][coluna] = {
+                x: posX,
+                y: posY,
+                ativo: true
+
+
+            };
+        }   
+    }
+}
+
+//FUnçâo: CRiar ARRAy De tiros
+
+function criarTiros()
+{
+    //limpa o array 
+    tiros = [];
+     
+    //Cria 3 tiros(todos começam inativos)
+    for (let i=0; i < MAX_TIROS; i++)
+    {
+        tiros[i] = {
+            x: 0,
+            y: 0,
+            ativo: false
+        }
+    }
+}
+
+//==================================================
+// FUNÇÃO: ATIRAR
+// Procura um tiro disponivel e dispara
+//==================================================
+
+function atirar()
+{
+    // Se esta em cooldown, não faz nada:
+    if (cooldownAtivo)
+    {
+        return;
+    }
+
+    // Se o jogo não está ativo, não faz nada:
+    if (!jogoAtivo)
+    {
+        return;
+    }
+
+    // Procura um tiro que NÃO está ativo (disponível)
+    for (let i = 0; i < tiros.length; i++)
+    {
+        if (tiros[i].ativo == false)
+        {
+            // Encontrou em tiro disponivel
+            // Posiciona o tiro acima da nave
+            tiros[i].x = naveX + (naveLargure / 2);
+            tiros[i].y = naveY;
+            tiros[i].ativo = true;
+
+            cooldownAtivo = true;
+
+            setTimeout(function()
+        {
+            cooldownAtivo = false;
+        },COOLDOWN_TEMPO);
+
+        return;
+        }
+    }
+}
+
+
+//========================================
+//FUNCAO MOVER  
+// MOVE A NAVE E OS TIROS
+//========================================
+
+function mover()
+{
+    //------MOVE A NAVE------
+
+    //Se está pressionando ESQUERDA
+    if(teclaEsquerda == true)
+    {
+        naveX = naveY - naveVelocidade;
+    }
+
+    //Se está pressionando DIREITA
+
+    if(teclaDireita == true)
+    {
+    naveX = naveY + naveVelocidade;
+    }    
+
+    //Impede a nave de sair da tela
+    if(naveX < 0)
+    {
+        naveX = 0
+    }
+
+    //Impede a nave de sair da tela (direita)
+    if(naveX > canvas.width)
+    {
+        naveX = canvas.width - naveLargure;
+    }
+
+
+    
+    /* MOVE OS TIROS */
+    for (let i = 0; i < tiros.lengeth; i++)
+    {
+        // Só move se o tiro estiver ativo
+        if (tiros[i].tiro == true)
+        {
+            //Se saiu da tela, desativa o tiro
+            if (tiros[i].y < 0)
+            {
+                tiros[i].ativo = false;
+            }
+        }
+    }
+}
+
+
+//================================================
+//FUNÇÃO: Testar Colisão
+//Verificando se um tiro colidiu com um bloco
+//Retorna TRUE se colidiu, FALSE se não colidiu
+//================================================
+
+function testarColisao(tiro, bloco)
+{
+    //Pega o centro 
+    let tiroX = tiro.x;
+    let tiroY = tiro.y;
+
+    //Pega os limites do bloco
+    let blocoEsquerda = bloco.x;
+    let blocoDireita = bloco.x + BLOCO_LARGURA;
+    let blocoCima = bloco.y;
+    let blocoBaixo = bloco.y +BLOCO_ALTURA;
+
+    //Verifca se o cetro do tiro esta dentro do bloco
+    //Assim fica mais facil de calcular e entender
+    if( tirosX > blocoEsquerda && tiroX < blocoDireita)
+    {
+        if(tiroY > blocoCima && tiroY < blocoBaixo)
+        {
+            return true;
+        }
+    }
+
+    return false;
+
+}
+
+//=========================================
+//FUNCAO: DESTRUIR BLOCO
+//Marca o bloco como inativo
+//======================================
+function destruirBloco(linha, coluna)
+{
+    blocos[linha][coluna].ativo = false;
+}
+
+//=======================================
+//Funcao : somar pontos
+//Adicionarpontos e atualiza a tela
+//======================================
+function somarPontos(quantidade)
+{
+    pontos = pontos + quantidade;
+    document.getElementById('pontos').textContent = pontos;
+
+}
+
+//=======================================
+//FUNÇÃO : VERIFICAR COLISÕES
+//Percorre todos os blocos e todos os tiros
+//=======================================
+
+function verificarColisoes()
+{
+    // Percorre todos os TIROS
+    for (let t = 0; t < tiros.length; t++)
+    {
+        // So faz o teste se o tiro estiver ativo
+        if (tiros[t].ativo == false)
+        {
+            continue; // Pula para o proximo tiro
+        }
+
+        // Percorre todas as LINHAS de BLOCOS
+        for (let linha = 0; linha < blocos.length; linha++)
+        {
+            // Percorre todas as COLUNAS dessa linha
+            for (let coluna = 0; coluna < blocos[linha].length; coluna++)
+            {
+                // Pega o bloco atual
+                let bloco = blocos[linha][coluna];
+
+                // So faz a verificacao se o bloco estiver ativo
+                if (bloco.ativo == false)
+                {
+                    continue; // Pula para o proximo bloco
+                }
+
+                // testa a colisao
+                if (testarColisao(tiros[t], bloco))
+                {
+                    // Colidiu!!
+
+                    // Destroi o bloco
+                    destruirBlocos(linha, coluna);
+
+                    // Desativa o tiro
+                    tiros[t].ativo = false;
+
+                    // Soma os pontos
+                    somarPontos(10);
+                }
+            }
+        }
+    }
+}
+
+//==================================================
+// FUNÇÃO: CONTAR BLOCOS ATIVOS
+// Retorna quantos blcos ainda existem
+//==================================================
+
+function contarBlocosAtivos()
+{
+    let contador = 0;
+
+    for (let linhas = 0; linha < blocos.length; linha++)
+    {
+        for(let coluna = 0; coluna < blocos[linha].length; coluna++)
+        {
+            if(blocos[linha][colunas].ativo == true)
+            {
+                contador++;
+            }
+        }
+    }
+    return contador;
+}
+
+//==================================================
+// FUNÇÃO: VERIFICAR VITÓRIA
+//==================================================
+function verificarVitoria()
+{
+    let blocosRestantes = contarBlocosAtivos();
+
+    if(blocosRestantes == 0)
+    {
+        venceu = true;
+        jogoAtivo = false;
+    }
+}
+
+//==================================================
+// FUNÇÃO: REINICIAR JOGO
+//==================================================
+
+function reiniciarJogo()
+{
+    pontos = 0;
+    jogoAtivo = true;
+    venceu = false;
+    naveX = 275;
+
+    document.getElementById('pontos').textContext = '0';
+
+    criarBlocos();
+    criarTiros();
+}
+
+//==================================================
+// FUNÇÃO: DESENHAR TELA DE VITÓRIA
+//==================================================
+
+function desenharTelaVitoria()
+{
+    //Fundo semi-transparente
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    //Texto de vitoria
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 48px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('VITÓRIA!!', canvas.width / 2, 200);
+
+    //Pontuação
+
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = '24px Courier New'
+    ctx.fillText('Pontos: ' + pontos, canvas.width / 2, 260);
+
+    //Instruções para reiniciar
+    ctx.fillStyle = '#88ffcc';
+    ctx.font = '18px Courier New';
+    ctx.fillText('Clique para jogar novamente', canvas.width / 2, 320);
+}
+
+//==================================================
+// FUNÇÃO: DESENHAR NAVE
+//==================================================
+
+function desenharNave()
+{
+    ctx.fillStyle = '#00ff88';
+
+    //Desenha um triangulo(nave)
+    ctx.beginPath();
+    ctx.moveTo(naveX + naveAltura / 2, naveY);
+    ctx.lineTo(naveX, naveY + naveAltura);
+    ctx.lineTo(naveX + naveLargure, naveY + naveAltura);
+    ctx.closePath();
+    ctx.fill();
+
+    //Desenhar o corpo da nave
+    ctx.fillStyle = '#00cc66'
+    ctx.fillRect(naveX + 10, naveY + 10, naveLargure - 20, naveAltura - 5);
+}
+
+//==================================================
+// FUNÇÃO: DESENHAR BLOCOS
+//==================================================
+
+function desenharBlocos()
+{
+    let cores = ['#ffd93d','#ff6b6b','#6bcb77','#4d96ff'];
+}
+
+//==================================================
+// FUNÇÃO: VITÓRIA
+//==================================================
+
+//==================================================
+// FUNÇÃO: DESENHAR TIROS (BOLINHAS)
+//==================================================
+
+//==================================================
+// FUNÇÃO: ATUALIZAR DEBUG
+//==================================================
+
+//==================================================
+// FUNÇÃO: DESENHAR JOGO
+//==================================================
+
+//==================================================
+// FUNÇÃO: LOOP DO JOGO
+// Roda60 vezes por segundo
+//==================================================
+
+//==================================================
+// EVENTOS DO TECLADO
+//==================================================
+
+//==================================================
+// EVENTOS DO MOUSE
+//==================================================
+
+//==================================================
+// REINICIA O JOGO
+//==================================================
